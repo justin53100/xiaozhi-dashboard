@@ -1,0 +1,19 @@
+{
+  "name": "小郅的工作台",
+  "short_name": "小郅",
+  "description": "医美咨询顾问的顾客跟进与业绩工作台",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f0f6fc",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
