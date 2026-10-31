@@ -198,6 +198,15 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 }
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ==== AI 助手 / 课件库 / 弹层 ==== */
+.chatlog{display:flex;flex-direction:column;gap:10px;max-height:56vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:2px}
+.bub{max-width:88%;padding:10px 14px;border-radius:14px;font-size:15px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.bub.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.bub.bot{align-self:flex-start;background:var(--bg);border:1px solid var(--line);border-bottom-left-radius:4px;width:fit-content;max-width:100%}
+#ov{position:fixed;inset:0;z-index:70;display:none;align-items:flex-end;justify-content:center;background:rgba(20,30,50,.42)}
+#ov .panel{background:var(--card);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0))}
+
+
 /* ════════ 动画 ════════
    只做「让状态变化可理解」的动画，不做炫技的。
    这是一天开十次的工具，任何多余动效第十次看就烦了。 */
@@ -473,6 +482,15 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
         </div>
         <p class="hint" id="learnCount"></p>
       </div>
+
+      <div class="card wide">
+        <h2>🧠 我的知识库 <span class="hint" id="kbCount" style="margin:0 0 0 auto"></span></h2>
+        <div class="row" style="margin-bottom:4px">
+          <button class="btn ghost sm" onclick="App.go('ai')">🤖 去问 AI</button>
+        </div>
+        <div id="kbList"></div>
+        <p class="hint" style="margin-bottom:0">在 AI 助手页对满意的回答点「存入知识库」，就会收集到这里；也可以把机构培训的要点自己记进来。</p>
+      </div>
     </section>
     <!-- ==== 功能：每日知识 END ==== -->
 
@@ -483,6 +501,11 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 
       <div class="card wide">
         <div class="wrap" id="scriptCats"></div>
+        <div class="row" style="margin-top:12px">
+          <button class="btn ghost sm" onclick="Scripts.newManual()">＋ 手动新建</button>
+          <button class="btn ghost sm" onclick="Scripts.genAI()">✨ AI 生成</button>
+        </div>
+        <p class="hint" style="margin:8px 0 0">自己攒的话术和 AI 帮你写的都会同步到另一台设备；每条话术都能点「✨优化」让 AI 重写一版。</p>
       </div>
 
       <div class="card wide" id="scriptList"></div>
@@ -502,6 +525,52 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       </div>
     </section>
     <!-- ==== 功能：周复盘 END ==== -->
+
+    <!-- ==== 功能：AI 助手 START ==== -->
+    <section class="page" id="page-ai">
+      <div class="page-title">AI 助手</div>
+      <div class="page-sub">话术、专业知识、顾客异议，随时问</div>
+
+      <div class="card wide">
+        <div class="wrap" id="aiQuick"></div>
+        <p class="hint" style="margin:10px 0 0">
+          AI 的知识来自训练数据，<b>不是联网实时</b>；行业最新动态建议结合课件和机构培训。
+          满意的回答点「存入知识库」，会收进每日知识页的知识库，手机电脑同步。
+        </p>
+      </div>
+
+      <div class="card wide">
+        <div class="chatlog" id="aiLog"></div>
+        <div class="row" style="margin-top:14px">
+          <input type="text" id="aiInput" placeholder="例如：顾客说太贵了怎么回" onkeydown="if(event.key==='Enter')AIChat.send()">
+          <button class="btn" onclick="AIChat.send()">发送</button>
+        </div>
+      </div>
+    </section>
+    <!-- ==== 功能：AI 助手 END ==== -->
+
+    <!-- ==== 功能：课件库 START ==== -->
+    <section class="page" id="page-files">
+      <div class="page-title">课件库</div>
+      <div class="page-sub">机构培训课件、产品资料都放这里，手机电脑都能取</div>
+
+      <div class="card wide">
+        <div class="row">
+          <button class="btn" onclick="document.getElementById('fileInput').click()">⬆️ 上传课件</button>
+          <button class="btn ghost" onclick="Files.render()">刷新</button>
+        </div>
+        <input type="file" id="fileInput" multiple style="display:none"
+          accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.mp4,.txt,.md"
+          onchange="Files.upload(this)">
+        <p class="hint">
+          支持 PDF / PPT / Word / 图片 / 视频等，单个不超过 20MB。<br>
+          课件存在你的云端账号里，和顾客数据一样，只有登录你的账号才能拿到。
+        </p>
+      </div>
+
+      <div class="card wide" id="fileList"></div>
+    </section>
+    <!-- ==== 功能：课件库 END ==== -->
 
     <!-- 设置页是必备的，不要删 -->
     <!-- ==== 功能：设置 START ==== -->
@@ -560,6 +629,29 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       </div>
       <!-- ==== 双端同步卡片 END ==== -->
 
+      <!-- ==== AI 状态卡片 START ==== -->
+      <div class="card wide" id="aiCard">
+        <h2>🤖 AI 助手 <span class="hint" id="aiState" style="margin:0 0 0 auto"></span></h2>
+        <div id="aiOff">
+          <p class="hint" style="margin-top:0">
+            还没配置好。需要一次性做完这三步（约 5 分钟）：<br>
+            1. Makers 控制台 → <b>Models</b> → API Key → <b>创建 API Key</b>，复制下来<br>
+            2. 进入本项目 → <b>设置</b> → 环境变量 → 新增：<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;名称 <b class="mono">MAKERS_MODELS_KEY</b>，值粘贴刚才的 Key<br>
+            3. 重新部署一次，等部署成功<br>
+            配好后回到设置页看，这里会变成「已就绪」。
+          </p>
+        </div>
+        <div id="aiOn" style="display:none">
+          <p class="hint" style="margin-top:0">
+            已就绪 ✅ 模型：<span id="aiModel" class="mono"></span><br>
+            话术库每条都能「✨优化」；AI 助手随问随答，额度是平台送的，日常用不完。
+          </p>
+        </div>
+      </div>
+      <!-- ==== AI 状态卡片 END ==== -->
+
+
       <div class="card">
         <h2>⚠️ 危险操作</h2>
         <button class="btn danger" onclick="Store.wipe()">清空所有数据</button>
@@ -576,6 +668,24 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
     <!-- ==== 功能：设置 END ==== -->
 
   </main>
+</div>
+
+<!-- AI 话术弹层：AI 生成 / 优化 / 手动新建共用 -->
+<div id="ov">
+  <div class="panel">
+    <h2 id="ovTitle" style="margin-bottom:14px">话术</h2>
+    <label class="field">分类</label>
+    <select id="ovCat"></select>
+    <label class="field">场景</label>
+    <input type="text" id="ovScene" placeholder="顾客说太贵了 / 邀约复查…">
+    <label class="field">话术内容（可直接改）</label>
+    <textarea id="ovText" style="min-height:120px"></textarea>
+    <div class="row" style="margin-top:16px">
+      <button class="btn" id="ovSave" onclick="Overlay.applyOrig()" style="display:none">替换原话术</button>
+      <button class="btn" onclick="Overlay.saveNew()">另存为新话术</button>
+      <button class="btn ghost" onclick="Overlay.close()">取消</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1199,6 +1309,8 @@ const App = {
     { id:'perf',     icon:'💰', name:'业绩看板', onShow: () => Perf.render()   },
     { id:'learn',    icon:'📖', name:'每日知识', onShow: () => Learn.render()  },
     { id:'scripts',  icon:'📚', name:'话术库',   onShow: () => Scripts.render() },
+    { id:'ai',       icon:'🤖', name:'AI 助手',  onShow: () => AIChat.render() },
+    { id:'files',    icon:'📂', name:'课件库',   onShow: () => Files.render()  },
     { id:'recap',    icon:'📊', name:'周复盘',   onShow: () => Recap.render()  },
     { id:'settings', icon:'⚙️', name:'设置',     onShow: () => Settings.render() }
   ],
@@ -1258,7 +1370,20 @@ const Settings = {
   render(){
     this.refreshBackupInfo();
     this.renderSync();
+    this.renderAI();
     if (!this.keys.length) document.getElementById('apiCard')?.remove();
+  },
+
+  /** AI 是否配置好，问一次云端就知道 */
+  async renderAI(){
+    const card = document.getElementById('aiCard');
+    if (!card) return;
+    const st = await AIApi.status();
+    if (st.offline) return;   // 网络不通就保持默认展示，别吓用户
+    document.getElementById('aiState').textContent = st.configured ? '已就绪' : '未配置';
+    document.getElementById('aiOff').style.display = st.configured ? 'none' : 'block';
+    document.getElementById('aiOn').style.display  = st.configured ? 'block' : 'none';
+    if (st.configured) document.getElementById('aiModel').textContent = st.model;
   },
 
   enableSync(){
@@ -1648,6 +1773,30 @@ const Learn = {
       this.off === 0 ? '一天一条，看得懂、说得出' : '正在往前翻，点「翻回前一天」旁边的按钮可以回到今天';
     document.getElementById('learnCount').textContent =
       `第 ${i + 1} / ${n} 条 · 翻完了从头循环。想要更多就跟生成器说「补一批知识卡」`;
+    this.renderKB();
+  },
+
+  /** AI 存进来的 + 手动记的知识点，双端同步 */
+  renderKB(){
+    const list = Store.list('kb').sort((a,b) => (b._u||0) - (a._u||0));
+    const el = document.getElementById('kbList');
+    if (!el) return;
+    document.getElementById('kbCount').textContent = list.length ? list.length + ' 条' : '';
+    el.innerHTML = list.length ? list.map(k => `
+      <div class="item">
+        <div class="grow">
+          <div style="font-weight:500;font-size:15px">${Util.esc(k.title || '未命名')}</div>
+          <div class="sub" style="white-space:pre-wrap">${Util.esc(k.body || '')}</div>
+        </div>
+        <button class="del" onclick="Learn.delKB('${k.id}')" title="删除">✕</button>
+      </div>`).join('')
+      : '<div class="empty">还空着。去问 AI，满意就点「存入知识库」。</div>';
+  },
+
+  delKB(id){
+    if (!confirm('删除这条知识？')) return;
+    Store.softDelete('kb', id);
+    this.renderKB();
   },
 
   next(){ this.off++; this.render(); },
@@ -1704,8 +1853,19 @@ const Scripts = {
       text:'回去三天内有任何不舒服，直接发照片给我，不用等复诊。别自己上网查，越查越慌。' }
   ],
 
+  /** 内置 + 自己攒的（含 AI 生成的），自定义的排前面 */
+  all(){
+    const mine = Store.list('myScript').map(x => ({
+      key: x.id, cat: x.cat, scene: x.scene, text: x.text, mine: 1
+    }));
+    return mine.concat(this.data);
+  },
+
+  isMine(key){ return Store.list('myScript').some(x => x.id === key); },
+
   cats(){
     const s = new Set(this.data.map(d => d.cat));
+    for (const m of Store.list('myScript')) s.add(m.cat);
     return ['全部', ...s];
   },
 
@@ -1718,7 +1878,7 @@ const Scripts = {
   },
 
   copy(id){
-    const d = this.data.find(x => x.key === id);
+    const d = this.all().find(x => x.key === id);
     if (!d) return;
     const ok = () => UI.toast('已复制，去微信粘贴');
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1736,24 +1896,67 @@ const Scripts = {
     document.body.removeChild(ta);
   },
 
+  del(id){
+    if (!confirm('删除这条话术？另一台设备也会删掉。')) return;
+    Store.softDelete('myScript', id);
+    this.render();
+  },
+
+  /** 手动新建：打开空弹层 */
+  newManual(){
+    Overlay.open({ title:'新建话术', cat: this.cat === '全部' ? '' : this.cat, scene:'', text:'', origKey:null });
+  },
+
+  /** AI 优化一条既有话术 */
+  async optimize(key){
+    const d = this.all().find(x => x.key === key);
+    if (!d) return;
+    UI.toast('AI 正在优化…');
+    try {
+      const t = await AIApi.call([
+        { role:'user', content:
+          `请优化这条医美销售话术。\n分类：${d.cat}\n场景：${d.scene}\n原话术：\n${d.text}\n\n` +
+          `要求：保留原意，更口语、更有说服力、不承诺疗效不夸大；只输出优化后的话术正文，不要任何解释。` }
+      ], AIChat.SYS, 0.6);
+      Overlay.open({ title:'AI 优化结果', cat:d.cat, scene:d.scene, text:t, origKey:key, canReplace:this.isMine(key) });
+    } catch(e){ UI.toast(e.message); }
+  },
+
+  /** AI 按场景生成一条新话术 */
+  async genAI(){
+    const need = prompt('想要什么场景？例如：顾客做完光子第二天，回访微信怎么说');
+    if (!need) return;
+    UI.toast('AI 正在生成…');
+    try {
+      const t = await AIApi.call([
+        { role:'user', content:
+          `请为以下场景写一条医美销售话术（微信消息风格，120 字以内，不承诺疗效）：\n${need}\n只输出话术正文。` }
+      ], AIChat.SYS, 0.8);
+      Overlay.open({ title:'AI 生成话术', cat:'AI 生成', scene:need.slice(0,30), text:t, origKey:null });
+    } catch(e){ UI.toast(e.message); }
+  },
+
   render(){
     document.getElementById('scriptCats').innerHTML = this.cats().map(c =>
       `<button class="chip ${c === this.cat ? 'on' : ''}" onclick="Scripts.pick('${c}')">${c}</button>`
     ).join('');
 
-    const list = this.data.filter(d => this.cat === '全部' || d.cat === this.cat);
+    const list = this.all().filter(d => this.cat === '全部' || d.cat === this.cat);
     document.getElementById('scriptList').innerHTML = list.map(d => {
       const on = this.starred(d.key);
+      const mineTag = d.mine ? '<span style="color:var(--accent);font-size:12px">· 我的</span>' : '';
       return `<div class="frow">
         <div class="item" style="border:none;padding:0">
           <div class="grow">
-            <div class="sub" style="margin:0 0 4px">${Util.esc(d.cat)} · ${Util.esc(d.scene)}</div>
+            <div class="sub" style="margin:0 0 4px">${Util.esc(d.cat)} · ${Util.esc(d.scene)} ${mineTag}</div>
             <div style="font-size:15px;line-height:1.75">${Util.esc(d.text)}</div>
           </div>
         </div>
         <div class="acts">
           <button class="btn sm" onclick="Scripts.copy('${d.key}')">复制</button>
+          <button class="btn ghost sm" onclick="Scripts.optimize('${d.key}')">✨优化</button>
           <button class="chip ${on ? 'on' : ''}" onclick="Scripts.star('${d.key}')">${on ? '★ 常用' : '☆ 标星'}</button>
+          ${d.mine ? `<button class="btn ghost sm" onclick="Scripts.del('${d.key}')">删除</button>` : ''}
         </div>
       </div>`;
     }).join('');
@@ -1878,6 +2081,312 @@ const Recap = {
   }
 };
 /* ==== 功能：周复盘 END ==== */
+
+
+/* ═══════════════════════════════════════════════════════════
+   AIApi · AI 调用底座
+   走云端 /api/ai 代理：Key 只存在服务器环境变量里，前端永远拿不到。
+   鉴权复用同步账号——额度是大家的，不能让拿到链接的陌生人白嫖。
+   ═══════════════════════════════════════════════════════════ */
+const AIApi = {
+  creds(){
+    if (typeof Sync === 'undefined' || !Sync.on()) return null;
+    return { user: Sync.cfg().user, pass: Sync.pass() };
+  },
+
+  async call(messages, system, temperature){
+    const c = this.creds();
+    if (!c) throw new Error('AI 需要先开启同步：去设置页开启双端同步（AI 走你的账号鉴权）');
+    const r = await fetch('/api/ai', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify({ action:'chat', user:c.user, pass:c.pass, messages, system, temperature })
+    });
+    const j = await r.json().catch(() => ({ error:'返回格式不对' }));
+    if (!r.ok){
+      if (j.error === 'AI_NOT_CONFIGURED')
+        throw new Error('AI 还没配置好：去 Makers 控制台 Models 页创建 API Key 并写入环境变量 MAKERS_MODELS_KEY（设置页有指引）');
+      throw new Error(j.error || ('请求失败 ' + r.status));
+    }
+    return j.text;
+  },
+
+  /** 不需要登录，只报告配置状态 */
+  async status(){
+    try {
+      const r = await fetch('/api/ai', {
+        method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ action:'status' })
+      });
+      const j = await r.json();
+      return { configured: !!j.configured, model: j.model || '' };
+    } catch { return { configured:false, model:'', offline:true }; }
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   AIChat · AI 助手对话页
+   对话只在内存里（换页即清），真正有价值的内容靠「存入知识库」沉淀。
+   ═══════════════════════════════════════════════════════════ */
+const AIChat = {
+  msgs: [],
+  SYS: '你是医美机构的资深销售咨询顾问教练，服务对象是一名医美销售咨询顾问。回答要求：1) 专业、口语化，能直接对顾客说出口；2) 涉及医疗内容严谨准确，不夸大疗效、不承诺效果，符合医疗合规；3) 分点回答，每点尽量短；4) 用中文。',
+
+  QUICK: [
+    '顾客说太贵了，帮我写三条微信回复',
+    '水光针的原理，怎么讲给顾客听',
+    '热玛吉术后注意事项，发顾客的版本',
+    '顾客怕疼，怎么劝她尝试光电项目',
+    '写一条朋友圈文案，主题是秋季补水'
+  ],
+
+  render(){
+    document.getElementById('aiQuick').innerHTML = this.QUICK.map((q,i) =>
+      `<button class="chip" onclick="AIChat.send(AIChat.QUICK[${i}])">${Util.esc(q)}</button>`).join('');
+    const log = document.getElementById('aiLog');
+    if (!this.msgs.length){
+      log.innerHTML = '<div class="empty">问我任何顾客问题、话术、专业知识。<br>满意的回答点「存入知识库」，随时回来翻。</div>';
+      return;
+    }
+    log.innerHTML = this.msgs.map((m,i) => this.bubble(m,i)).join('');
+    log.scrollTop = log.scrollHeight;
+  },
+
+  bubble(m,i){
+    if (m.role === 'user') return `<div class="bub me">${Util.esc(m.content)}</div>`;
+    return `<div class="bub bot">${Util.esc(m.content)}
+      <div class="acts" style="margin-top:8px">
+        <button class="btn ghost sm" onclick="AIChat.saveKB(${i})">＋ 存入知识库</button>
+        <button class="btn ghost sm" onclick="AIChat.copyMsg(${i})">复制</button>
+      </div></div>`;
+  },
+
+  async send(text){
+    text = (text !== undefined && typeof text !== 'object') ? text : document.getElementById('aiInput').value;
+    text = (text || '').trim();
+    if (!text) return;
+    if (!AIApi.creds()){
+      UI.toast('AI 需要先开启同步：去设置页开启双端同步');
+      return;
+    }
+    document.getElementById('aiInput').value = '';
+    this.msgs.push({ role:'user', content:text });
+    this.msgs.push({ role:'assistant', content:'' });
+    this.render();
+    const log = document.getElementById('aiLog');
+    log.lastElementChild.innerHTML = '<span class="hint">思考中…</span>';
+    try {
+      const t = await AIApi.call(this.msgs.slice(0, -1), this.SYS, 0.7);
+      this.msgs[this.msgs.length - 1].content = t;
+      this.render();
+    } catch(e){
+      this.msgs.pop();   // 把占位的空回复撤掉
+      UI.toast(e.message);
+      this.render();
+      document.getElementById('aiInput').value = text;   // 输入还给他
+    }
+  },
+
+  saveKB(i){
+    const m = this.msgs[i];
+    if (!m || !m.content) return;
+    const title = m.content.split('\n').find(l => l.trim()) || 'AI 回答';
+    Store.upsert('kb', { id: Util.uid(), title: title.trim().slice(0, 30), body: m.content });
+    UI.toast('已存入知识库，在「每日知识」页查看');
+  },
+
+  copyMsg(i){
+    const m = this.msgs[i];
+    if (!m) return;
+    const ok = () => UI.toast('已复制');
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(m.content).then(ok).catch(() => {});
+    else UI.toast('长按文字手动复制');
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   Files · 课件库
+   文件本体走云端 /api/files（分块上传绕过 1MB 请求体限制），
+   元数据也在云端，所以手机传的电脑直接能下载，不占 localStorage。
+   ═══════════════════════════════════════════════════════════ */
+const Files = {
+  CHUNK: 600 * 1024,      // 单块 600KB，base64 后 ~800KB，稳稳低于 1MB 请求体上限
+  list: [],
+  _loading: false,
+
+  creds(){ return AIApi.creds(); },
+
+  async api(payload){
+    const c = this.creds();
+    if (!c) throw new Error('需要先开启同步');
+    const r = await fetch('/api/files', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify(Object.assign({ user:c.user, pass:c.pass }, payload))
+    });
+    const j = await r.json().catch(() => ({ error:'返回格式不对' }));
+    if (!r.ok) throw new Error(j.error || ('请求失败 ' + r.status));
+    return j;
+  },
+
+  async render(){
+    const el = document.getElementById('fileList');
+    if (!el) return;
+    if (!this.creds()){
+      el.innerHTML = '<div class="empty">开启双端同步后，课件存在云端，<br>手机和电脑都能看到。<br><br><button class="btn sm" onclick="App.go(\'settings\')">去设置开启</button></div>';
+      return;
+    }
+    if (this._loading) return;
+    this._loading = true;
+    el.innerHTML = '<div class="empty">读取中…</div>';
+    try {
+      const j = await this.api({ action:'list' });
+      this.list = j.files || [];
+      el.innerHTML = this.list.length
+        ? this.list.slice().sort((a,b) => b.createdAt - a.createdAt).map(f => this.row(f)).join('')
+        : '<div class="empty">还没有课件。点上面「上传课件」试试，机构发的培训 PDF 都能放进来。</div>';
+    } catch(e){
+      el.innerHTML = `<div class="empty">${Util.esc(e.message)}</div>`;
+    }
+    this._loading = false;
+  },
+
+  row(f){
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    const icon = ({pdf:'📕',ppt:'📊',pptx:'📊',doc:'📄',docx:'📄',xls:'📈',xlsx:'📈',
+                   png:'🖼️',jpg:'🖼️',jpeg:'🖼️',webp:'🖼️',mp4:'🎬',txt:'📝',md:'📝'})[ext] || '📎';
+    const size = f.size >= 1048576 ? (f.size/1048576).toFixed(1) + ' MB'
+               : Math.max(1, Math.round(f.size/1024)) + ' KB';
+    return `<div class="item">
+      <div style="font-size:24px;flex-shrink:0">${icon}</div>
+      <div class="grow">
+        <div style="font-size:15px;word-break:break-all">${Util.esc(f.name)}</div>
+        <div class="sub">${size} · ${new Date(f.createdAt).toLocaleDateString('zh-CN')}</div>
+      </div>
+      <div class="acts" style="margin:0">
+        <button class="btn sm" onclick="Files.download('${f.id}')">下载</button>
+        <button class="btn ghost sm" onclick="Files.del('${f.id}')">删除</button>
+      </div>
+    </div>`;
+  },
+
+  async upload(input){
+    const fs = [...input.files];
+    input.value = '';
+    if (!fs.length) return;
+    if (!this.creds()) return UI.toast('先去设置里开启同步，课件才能存到云端');
+    for (const f of fs){
+      try {
+        if (f.size > 20 * 1024 * 1024){ UI.toast(`「${f.name}」超过 20MB，先跳过`); continue; }
+        UI.toast(`正在上传「${f.name}」…`);
+        const buf = new Uint8Array(await f.arrayBuffer());
+        const chunks = Math.ceil(buf.length / this.CHUNK);
+        const j = await this.api({ action:'init', name:f.name, size:buf.length, chunks,
+                                   mime:f.type || 'application/octet-stream' });
+        for (let i = 0; i < chunks; i++){
+          await this.api({ action:'put', fileId:j.id, idx:i,
+                           data:this.b64(buf.slice(i*this.CHUNK, (i+1)*this.CHUNK)) });
+        }
+        UI.toast(`「${f.name}」上传完成`);
+      } catch(e){ UI.toast('上传失败：' + e.message); }
+    }
+    this.render();
+  },
+
+  b64(u8){
+    let s = '';
+    for (let i = 0; i < u8.length; i += 0x8000)
+      s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+    return btoa(s);
+  },
+
+  unb64(str){
+    const bin = atob(str);
+    const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  },
+
+  async download(id){
+    const f = this.list.find(x => x.id === id);
+    if (!f) return;
+    UI.toast('准备下载…');
+    try {
+      const parts = [];
+      for (let i = 0; i < f.chunks; i++){
+        const c = await this.api({ action:'chunk', fileId:id, idx:i });
+        parts.push(this.unb64(c.data));
+      }
+      let total = 0; parts.forEach(p => total += p.length);
+      const all = new Uint8Array(total);
+      let off = 0; parts.forEach(p => { all.set(p, off); off += p.length; });
+      const url = URL.createObjectURL(new Blob([all], { type:f.mime || 'application/octet-stream' }));
+      const a = document.createElement('a');
+      a.href = url; a.download = f.name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      UI.toast('已开始下载');
+    } catch(e){ UI.toast('下载失败：' + e.message); }
+  },
+
+  async del(id){
+    const f = this.list.find(x => x.id === id);
+    if (!f || !confirm(`删除「${f.name}」？所有设备上都会消失。`)) return;
+    try { await this.api({ action:'del', fileId:id }); UI.toast('已删除'); }
+    catch(e){ UI.toast('删除失败：' + e.message); }
+    this.render();
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   Overlay · 话术弹层（AI 优化结果 / AI 生成 / 手动新建 共用）
+   ═══════════════════════════════════════════════════════════ */
+const Overlay = {
+  _o: null,
+
+  open(o){
+    this._o = o || {};
+    const d = this._o;
+    document.getElementById('ovTitle').textContent = d.title || '话术';
+    const cats = Scripts.cats().filter(c => c !== '全部');
+    if (d.cat && !cats.includes(d.cat)) cats.push(d.cat);
+    document.getElementById('ovCat').innerHTML = cats.map(c =>
+      `<option value="${Util.esc(c)}" ${c === d.cat ? 'selected' : ''}>${Util.esc(c)}</option>`).join('');
+    document.getElementById('ovScene').value = d.scene || '';
+    document.getElementById('ovText').value = d.text || '';
+    document.getElementById('ovSave').style.display = d.canReplace ? 'inline-block' : 'none';
+    document.getElementById('ov').style.display = 'flex';
+  },
+
+  close(){ document.getElementById('ov').style.display = 'none'; },
+
+  /** 替换原话术：只对「我的话术」生效；内置话术不可覆盖 */
+  applyOrig(){
+    const d = this._o;
+    if (!d || !d.origKey) return;
+    const text = document.getElementById('ovText').value.trim();
+    if (!text) return UI.toast('话术内容不能为空');
+    if (!Scripts.isMine(d.origKey)) return UI.toast('内置话术不能直接改，请用「另存为新话术」');
+    const it = Store.list('myScript').find(x => x.id === d.origKey);
+    Store.upsert('myScript', { id:d.origKey, cat:it.cat, scene:it.scene, text });
+    this.close();
+    Scripts.render();
+    UI.toast('已替换，双端会同步');
+  },
+
+  saveNew(){
+    const d = this._o;
+    const cat = document.getElementById('ovCat').value;
+    const scene = document.getElementById('ovScene').value.trim() || '自用话术';
+    const text = document.getElementById('ovText').value.trim();
+    if (!text) return UI.toast('话术内容不能为空');
+    Store.upsert('myScript', { id: Util.uid(), cat, scene, text });
+    this.close();
+    Scripts.render();
+    UI.toast('已保存，双端会同步');
+  }
+};
 
 
 App.init();
