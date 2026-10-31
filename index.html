@@ -240,6 +240,19 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .rp-sum{margin-top:14px;background:var(--bg);border-radius:10px;padding:10px 13px;font-size:13.5px;color:#5a7396;line-height:1.6}
 .coverImg{width:100%;border-radius:14px;border:1px solid var(--line);display:block;margin-top:12px}
 
+/* ==== 照片标注层 ==== */
+.an-wrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#0d1522}
+.an-wrap img{width:100%;display:block;opacity:.96}
+.an-overlay{position:absolute;inset:0}
+.an-line{position:absolute;left:0;right:0;border-top:1.5px dashed rgba(255,255,255,.75);text-shadow:0 1px 3px rgba(0,0,0,.6)}
+.an-linetag{position:absolute;right:6px;top:-17px;font-size:11px;color:#fff;background:rgba(20,35,60,.55);padding:1px 7px;border-radius:999px;backdrop-filter:blur(2px)}
+.an-mark{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.an-mark.lft{flex-direction:row-reverse;transform:translate(-50%,-50%)}
+.an-dot{width:20px;height:20px;flex:none;border-radius:50%;background:#2b7fff;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45)}
+.an-tag{display:flex;flex-direction:column;background:rgba(15,28,48,.72);color:#fff;border-radius:8px;padding:3px 8px;font-size:11px;line-height:1.35;backdrop-filter:blur(3px);max-width:150px;white-space:normal}
+.an-tag b{font-size:11.5px}
+.an-tag i{font-style:normal;opacity:.82;font-size:10.5px}
+
 
 
 /* ════════ 动画 ════════
@@ -2500,9 +2513,9 @@ const Studio = {
   ],
 
   PROMPTS: {
-    report: '分析这张面部照片，然后只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字、解释或代码块标记。JSON 结构（字段名和顺序严格一致）：\n{"kind":"report","score":0到100的整数,"verdict":"一句话总评（20字内）","radar":[{"name":"轮廓线条","score":0到100整数},{"name":"五官比例","score":整数},{"name":"皮肤状态","score":整数},{"name":"对称度","score":整数},{"name":"上镜度","score":整数}],"highlights":["五官亮点1","亮点2","亮点3"],"items":[{"area":"部位名","note":"现状描述一句话","tip":"提升建议一句话（咨询口吻）","project":"可沟通的项目方向","say":"给顾客的一句话"}],"summary":"整体小结50字内"}\nitems 给 3-4 条。不做医疗诊断，不承诺效果。',
+    report: '分析这张面部照片，然后只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字、解释或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"report","score":0到100整数,"verdict":"一句话总评20字内","lines":[{"y":0到1小数,"label":"发际线或眉线或鼻底或颏底"}],"marks":[{"label":"部位名如额结节/眉峰/颧骨高点/鼻尖/唇峰/下巴顶点","x":0到1小数,"y":0到1小数,"note":"一句话标注"}],"radar":[{"name":"轮廓线条","score":0到100整数},{"name":"五官比例","score":整数},{"name":"皮肤状态","score":整数},{"name":"对称度","score":整数},{"name":"上镜度","score":整数}],"highlights":["五官亮点1","亮点2","亮点3"],"items":[{"area":"部位名","note":"现状一句话","tip":"提升建议一句话（咨询口吻）","project":"可沟通的项目方向","say":"给顾客的一句话"}],"summary":"整体小结50字内"}\n说明：lines 给 3-4 条水平参考线（y 是从照片顶部算起的相对高度，用于三庭测量）；marks 给 5-8 个关键点位（x 从左往右、y 从上往下都是 0-1 相对比例，尽量贴近真实位置）。items 给 3-4 条。不做医疗诊断，不承诺效果。',
     style:  '分析这张照片，判断个人风格，然后只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"style","score":风格契合度0到100整数,"verdict":"主风格命名，如「温柔知性风」","tags":["气质关键词1","关键词2","关键词3"],"radar":[{"name":"气场","score":0到100},{"name":"甜度","score":整数},{"name":"成熟度","score":整数},{"name":"少年感","score":整数},{"name":"精致度","score":整数}],"colors":["适合该风格的服装主色，#RRGGBB格式","第二个颜色","第三个颜色","第四个颜色"],"highlights":["判断依据1（面部线条/五官/气质）","判断依据2"],"items":[{"area":"妆容/发型/穿搭/项目四选一","note":"现状或要点一句话","tip":"具体建议","project":"可沟通的项目方向","say":"给顾客的一句话"}],"summary":"50字内小结"}\nitems 给 3-4 条。',
-    mark:   '按面部美学框架（三庭五眼、四高三低）分析这张照片，只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"mark","score":0到100整数,"verdict":"整体标注结论一句话","radar":[{"name":"三庭比例","score":0到100},{"name":"五眼比例","score":整数},{"name":"四高协调","score":整数},{"name":"三低立体","score":整数},{"name":"皮肤状态","score":整数}],"highlights":["标注亮点1","亮点2"],"items":[{"area":"部位名（上庭/中庭/下庭/眼距/额头/鼻部/唇部/下巴/眼窝/人中沟/皮肤 中选）","note":"一句标注语","tip":"一句建议","project":"可沟通的项目方向，没有就留空","say":"给顾客的一句话"}],"summary":"50字内整体小结"}\nitems 给 5-8 条。',
+    mark:   '按面部美学框架（三庭五眼、四高三低）分析这张照片，只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"mark","score":0到100整数,"verdict":"整体标注结论一句话","lines":[{"y":0到1小数,"label":"发际线/眉线/鼻底/颏底"}],"marks":[{"label":"部位名","x":0到1小数,"y":0到1小数,"note":"一句标注语"}],"radar":[{"name":"三庭比例","score":0到100},{"name":"五眼比例","score":整数},{"name":"四高协调","score":整数},{"name":"三低立体","score":整数},{"name":"皮肤状态","score":整数}],"highlights":["标注亮点1","亮点2"],"items":[{"area":"部位名（上庭/中庭/下庭/眼距/额头/鼻部/唇部/下巴/眼窝/人中沟/皮肤 中选）","note":"一句标注语","tip":"一句建议","project":"可沟通的项目方向，没有就留空","say":"给顾客的一句话"}],"summary":"50字内整体小结"}\n说明：lines 给 4 条三庭水平线（y 是从照片顶部算的相对高度）；marks 给 6-10 个关键点位（x 从左往右、y 从上往下都是 0-1 相对比例，尽量贴近真实位置）。',
     beauty: '假设这是顾客本人照片，制定变美路线图，只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"beauty","score":改善潜力0到100整数,"verdict":"路线总纲一句话","radar":[{"name":"皮肤管理","score":优先级0到100},{"name":"轮廓协调","score":整数},{"name":"五官精雕","score":整数},{"name":"抗衰储备","score":整数},{"name":"居家配合","score":整数}],"highlights":["路线要点1","要点2"],"items":[{"area":"第1个月/第3个月/第6个月（共三条）","note":"阶段目标一句话","tip":"建议项目方向（咨询口吻，不承诺效果）","project":"居家护理配合","say":"给顾客的一句话"}],"summary":"提醒：以上为美学咨询建议，具体以面诊为准"}'
   },
 
@@ -2699,6 +2712,29 @@ const Studio = {
       <text x="55" y="72" text-anchor="middle" font-size="11" fill="#8aa2bd">综合评分</text></svg>`;
   },
 
+  /* ── 照片 + AI 标注层（三庭线 + 编号点位） ── */
+  annotatedHTML(d){
+    if (!this.photo || (!d.marks || !d.marks.length) && (!d.lines || !d.lines.length)) return '';
+    const esc = s => Util.esc(s == null ? '' : String(s));
+    const clamp = v => Math.max(0.02, Math.min(0.98, Number(v) || 0));
+    const lines = (d.lines || []).filter(l => l && isFinite(l.y)).map(l => `
+      <div class="an-line" style="top:${(clamp(l.y) * 100).toFixed(1)}%">
+        <span class="an-linetag">${esc(l.label)}</span></div>`).join('');
+    const marks = (d.marks || []).slice(0, 10).map((m, i) => {
+      const x = clamp(m.x) * 100, y = clamp(m.y) * 100;
+      const right = x > 58;   // 靠右的点位标签往左放
+      return `<div class="an-mark ${right ? 'lft' : ''}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%">
+        <span class="an-dot">${i + 1}</span>
+        <span class="an-tag"><b>${esc(m.label)}</b>${m.note ? '<i>' + esc(m.note) + '</i>' : ''}</span></div>`;
+    }).join('');
+    return `<div class="rp-sec"><div class="rp-sect">🔍 面部标注</div>
+      <div class="an-wrap"><img src="${this.photo}" alt="面部标注图">
+        <div class="an-overlay">${lines}${marks}</div>
+      </div>
+      <p class="hint" style="margin-top:6px">标注点位由 AI 估计，供沟通参考；横线为三庭测量参考。</p>
+    </div>`;
+  },
+
   renderRich(d, fallbackTitle){
     const esc = s => Util.esc(s == null ? '' : String(s));
     const title = esc(d.title || fallbackTitle || '美学分析报告');
@@ -2731,6 +2767,7 @@ const Studio = {
         </div>
       </div>
       <div id="studioCover"></div>
+      ${this.annotatedHTML(d)}
       ${radar}${highlights}${colors}
       ${items ? `<div class="rp-sec"><div class="rp-sect">📋 详细建议</div>${items}</div>` : ''}
       ${d.summary ? `<div class="rp-sum">${esc(d.summary)}</div>` : ''}
@@ -2758,114 +2795,138 @@ const Studio = {
     this.busy = false;
   },
 
-  /* ── 报告海报：canvas 合成，可保存发顾客 ── */
+  /* ── 报告海报：canvas 合成杂志版式（照片+标注+文字区块），可保存发顾客 ── */
   exportPoster(){
     const d = this.lastData;
     if (!d) return;
-    const W = 900, H = 1400;
+    const W = 1080;
+    const T = (v, n) => String(v == null ? '' : v).slice(0, n);
     const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
+    cv.width = W; cv.height = 2400;
     const g = cv.getContext('2d');
-    const escT = s => String(s == null ? '' : s);
+    const font = (sz, w, fill) => { g.font = (w ? w + ' ' : '') + sz + 'px "Microsoft YaHei","PingFang SC",sans-serif'; if (fill) g.fillStyle = fill; };
+    const rr = (x, y, w, h, r) => { g.beginPath();
+      if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); };
 
-    g.fillStyle = '#f4f9ff'; g.fillRect(0, 0, W, H);
-    // 头部
-    const grad = g.createLinearGradient(0, 0, W, 240);
+    g.fillStyle = '#f2f7fd'; g.fillRect(0, 0, W, 2400);
+
+    /* 头部品牌条 */
+    const grad = g.createLinearGradient(0, 0, W, 170);
     grad.addColorStop(0, '#2b7fff'); grad.addColorStop(1, '#5ea4ff');
-    g.fillStyle = grad; g.fillRect(0, 0, W, 240);
-    g.fillStyle = '#fff';
-    g.font = 'bold 46px "Microsoft YaHei", sans-serif';
-    g.fillText(escT(d.title || '美学分析报告'), 48, 92);
-    g.font = '24px "Microsoft YaHei", sans-serif'; g.globalAlpha = .9;
-    g.fillText('小郅的工作台 · AI 美学工坊', 48, 136);
-    g.fillText(new Date().toLocaleDateString('zh-CN'), 48, 172);
-    g.globalAlpha = 1;
+    g.fillStyle = grad; g.fillRect(0, 0, W, 170);
+    font(46, 'bold', '#fff'); g.fillText(T(d.title || '面部美学分析报告', 16), 52, 78);
+    font(22, '', 'rgba(255,255,255,.92)');
+    g.fillText('小郅的工作台 · AI 美学工坊', 52, 118);
+    g.fillText(new Date().toLocaleDateString('zh-CN'), W - 190, 118);
 
-    // 照片（圆形，本地内存，不上传）
-    let px = W - 48, py = 96;
+    let y = 200;
+
+    /* 照片区 + 标注层 */
+    const photoH = 640, px0 = 48, pw = W - 96;
+    g.fillStyle = '#101a2c'; rr(px0, y, pw, photoH, 20); g.fill();
     const drawPhoto = (done) => {
-      if (!this.photo) return done();
-      const img = new Image();
-      img.onload = () => {
-        const r = 74, cx2 = px - r, cy2 = py + r;
-        g.save();
-        g.beginPath(); g.arc(cx2, cy2, r, 0, Math.PI * 2); g.clip();
-        const s = Math.max(r * 2 / img.width, r * 2 / img.height);
-        g.drawImage(img, cx2 - img.width * s / 2, cy2 - img.height * s / 2, img.width * s, img.height * s);
-        g.restore();
-        g.beginPath(); g.arc(cx2, cy2, r, 0, Math.PI * 2);
-        g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 5; g.stroke();
-        done();
+      const finish = () => {
+        if (this.photo){
+          const img = new Image();
+          img.onload = () => {
+            const r = Math.min(pw / img.width, photoH / img.height) * 0.96;
+            const dw = img.width * r, dh = img.height * r;
+            const dx = px0 + (pw - dw) / 2, dy = y + (photoH - dh) / 2;
+            g.drawImage(img, dx, dy, dw, dh);
+            /* 三庭水平线 */
+            (d.lines || []).forEach(l => {
+              if (!isFinite(l.y)) return;
+              const ly = dy + Math.max(0.02, Math.min(0.98, l.y)) * dh;
+              g.strokeStyle = 'rgba(255,255,255,.8)'; g.setLineDash([10, 8]); g.lineWidth = 2;
+              g.beginPath(); g.moveTo(dx + 8, ly); g.lineTo(dx + dw - 8, ly); g.stroke(); g.setLineDash([]);
+              g.fillStyle = 'rgba(18,32,56,.72)';
+              rr(dx + dw - 128, ly - 22, 120, 30, 15); g.fill();
+              font(18, '', '#fff'); g.fillText(T(l.label, 6), dx + dw - 116, ly - 1);
+            });
+            /* 编号点位 */
+            (d.marks || []).slice(0, 10).forEach((m, i) => {
+              if (!isFinite(m.x) || !isFinite(m.y)) return;
+              const mx = dx + Math.max(0.02, Math.min(0.98, m.x)) * dw;
+              const my = dy + Math.max(0.02, Math.min(0.98, m.y)) * dh;
+              const right = m.x > 0.55;
+              g.fillStyle = '#2b7fff'; g.beginPath(); g.arc(mx, my, 17, 0, Math.PI * 2); g.fill();
+              g.strokeStyle = '#fff'; g.lineWidth = 3; g.stroke();
+              font(19, 'bold', '#fff');
+              g.fillText(String(i + 1), mx - (i < 9 ? 6 : 11), my + 7);
+              font(19, 'bold', '#1f3b63');
+              const label = T(m.label, 8);
+              const lw = g.measureText(label).width + 28;
+              const lx = right ? mx - 26 - lw : mx + 26;
+              g.fillStyle = 'rgba(255,255,255,.92)'; rr(lx, my - 18, lw, 34, 9); g.fill();
+              g.strokeStyle = '#cfe0f3'; g.lineWidth = 1.5; rr(lx, my - 18, lw, 34, 9); g.stroke();
+              font(19, 'bold', '#1f3b63'); g.fillText(label, lx + 14, my + 7);
+            });
+            done();
+          };
+          img.onerror = () => done();
+          img.src = this.photo;
+        } else done();
       };
-      img.onerror = () => done();
-      img.src = this.photo;
+      finish();
     };
 
     const drawBody = () => {
-      let y = 300;
-      // 评分 + 总评
-      g.fillStyle = '#fff';
-      g.beginPath(); g.roundRect ? g.roundRect(48, y, W - 96, 170, 22) : g.rect(48, y, W - 96, 170); g.fill();
-      const s = Math.max(0, Math.min(100, Number(d.score) || 0));
-      g.fillStyle = s >= 70 ? '#2b7fff' : '#e8a23d';
-      g.font = 'bold 84px "Microsoft YaHei", sans-serif';
-      g.fillText(String(s), 84, y + 108);
-      g.font = '22px "Microsoft YaHei", sans-serif'; g.fillStyle = '#8aa2bd';
-      g.fillText('综合评分', 88, y + 142);
-      g.fillStyle = '#1f3b63'; g.font = 'bold 30px "Microsoft YaHei", sans-serif';
-      g.fillText(escT(d.verdict).slice(0, 18), 240, y + 78);
-      g.font = '24px "Microsoft YaHei", sans-serif'; g.fillStyle = '#5a7396';
-      g.fillText(escT(d.summary).slice(0, 24), 240, y + 122);
-      y += 210;
+      y += photoH + 28;
 
-      // 亮点
+      /* 评分 + 总评卡 */
+      g.fillStyle = '#fff'; rr(48, y, W - 96, 150, 20); g.fill();
+      const sc = Math.max(0, Math.min(100, Number(d.score) || 0));
+      font(78, 'bold', sc >= 85 ? '#18a058' : sc >= 70 ? '#2b7fff' : '#e8a23d');
+      g.fillText(String(sc), 92, y + 92);
+      font(20, '', '#8aa2bd'); g.fillText('综合评分', 96, y + 126);
+      font(32, 'bold', '#1f3b63'); g.fillText(T(d.verdict, 18), 250, y + 66);
+      font(23, '', '#5a7396'); g.fillText(T(d.summary, 30), 250, y + 112);
+      y += 182;
+
+      /* 亮点 */
       (d.highlights || []).slice(0, 3).forEach(h => {
-        g.fillStyle = '#fff';
-        g.beginPath(); g.roundRect ? g.roundRect(48, y, W - 96, 74, 16) : g.rect(48, y, W - 96, 74); g.fill();
-        g.fillStyle = '#18a058'; g.font = 'bold 26px "Microsoft YaHei", sans-serif';
-        g.fillText('✓', 76, y + 46);
-        g.fillStyle = '#1f3b63'; g.font = '26px "Microsoft YaHei", sans-serif';
-        g.fillText(escT(h).slice(0, 28), 110, y + 46);
-        y += 90;
+        g.fillStyle = '#e9f7ef'; rr(48, y, W - 96, 62, 14); g.fill();
+        font(26, 'bold', '#18a058'); g.fillText('✓', 74, y + 40);
+        font(25, '', '#1f6b40'); g.fillText(T(h, 32), 106, y + 40);
+        y += 78;
       });
 
-      // 详细建议前 3 条
+      /* 建议卡 */
       (d.items || []).slice(0, 3).forEach(it => {
-        g.fillStyle = '#fff';
-        g.beginPath(); g.roundRect ? g.roundRect(48, y, W - 96, 168, 18) : g.rect(48, y, W - 96, 168); g.fill();
-        g.fillStyle = '#2b7fff'; g.font = 'bold 27px "Microsoft YaHei", sans-serif';
-        g.fillText(escT(it.area).slice(0, 12), 76, y + 46);
-        g.fillStyle = '#33475f'; g.font = '24px "Microsoft YaHei", sans-serif';
-        g.fillText(escT(it.note).slice(0, 30), 76, y + 88);
-        if (it.tip){ g.fillStyle = '#8a6d1f'; g.fillText('💡 ' + escT(it.tip).slice(0, 28), 76, y + 128); }
-        y += 190;
+        g.fillStyle = '#fff'; rr(48, y, W - 96, 148, 16); g.fill();
+        g.strokeStyle = '#e3edf8'; g.lineWidth = 2; rr(48, y, W - 96, 148, 16); g.stroke();
+        font(27, 'bold', '#2b7fff'); g.fillText(T(it.area, 12), 78, y + 44);
+        font(23, '', '#33475f'); g.fillText(T(it.note, 34), 78, y + 82);
+        if (it.tip){ font(23, '', '#8a6d1f'); g.fillText('💡 ' + T(it.tip, 32), 78, y + 120); }
+        y += 170;
       });
 
-      // 底部
-      g.fillStyle = '#8aa2bd'; g.font = '20px "Microsoft YaHei", sans-serif';
-      g.fillText('以上为 AI 美学咨询建议，非医疗诊断，具体以面诊为准', 48, H - 96);
-      g.fillText('由「小郅的工作台」生成', 48, H - 60);
+      /* 色卡 */
+      if (d.colors && d.colors.length){
+        g.fillStyle = '#fff'; rr(48, y, W - 96, 120, 16); g.fill();
+        font(22, 'bold', '#5a7396'); g.fillText('适合色系', 78, y + 40);
+        d.colors.slice(0, 5).forEach((c, i) => {
+          g.fillStyle = c; rr(78 + i * 120, y + 58, 96, 44, 10); g.fill();
+        });
+        y += 152;
+      }
 
-      const url = cv.toDataURL('image/png');
+      /* 底部 */
+      y += 16;
+      font(19, '', '#8aa2bd');
+      g.fillText('以上为 AI 美学咨询建议，非医疗诊断，具体以面诊为准', 52, y + 26);
+      g.fillText('由「小郅的工作台」生成', 52, y + 58);
+
+      /* 裁掉底部空白并导出 */
+      const out = document.createElement('canvas');
+      out.width = W; out.height = Math.min(2400, y + 100);
+      out.getContext('2d').drawImage(cv, 0, 0, W, out.height, 0, 0, W, out.height);
       const a = document.createElement('a');
-      a.href = url; a.download = '美学报告.png';
+      a.href = out.toDataURL('image/png'); a.download = '美学报告.png';
       document.body.appendChild(a); a.click(); a.remove();
-      UI.toast('海报已生成，手机端也可长按图片保存');
+      UI.toast('海报已生成；手机端也可长按图片保存');
     };
     drawPhoto(drawBody);
-  },
-
-  saveKB(){
-    if (!this.lastText) return;
-    Store.upsert('kb', { id: Util.uid(), title: this.lastText.title, body: this.lastText.body });
-    UI.toast('已存入知识库，在「每日知识」页查看');
-  },
-
-  copyLast(){
-    if (!this.lastText) return;
-    if (navigator.clipboard && navigator.clipboard.writeText)
-      navigator.clipboard.writeText(this.lastText.body).then(() => UI.toast('已复制')).catch(() => {});
-    else UI.toast('长按文字手动复制');
   },
 
   /* ── 海报：文生图 ── */
