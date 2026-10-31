@@ -216,6 +216,30 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 .frame .line{font-size:15px;font-weight:500;margin:4px 0}
 .result{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px;white-space:pre-wrap;font-size:15px;line-height:1.8;word-break:break-word}
 
+/* ==== 图文报告（Studio 富渲染） ==== */
+.rp{margin-top:14px}
+.rp-hero{display:flex;gap:16px;align-items:center;background:linear-gradient(135deg,#eaf3ff,#f7fbff);border:1px solid #d8e6f5;border-radius:16px;padding:16px}
+.rp-heroR{min-width:0}
+.rp-title{font-size:19px;font-weight:800;color:#1f3b63}
+.rp-verdict{font-size:14.5px;color:#33475f;margin-top:4px;line-height:1.5}
+.rp-tags{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.rp-tag{font-size:12px;padding:3px 10px;border-radius:999px;background:#fff;border:1px solid #cfe0f3;color:#2b7fff;font-weight:600}
+.rp-sec{margin-top:16px}
+.rp-sect{font-size:14px;font-weight:800;color:#5a7396;letter-spacing:.5px;margin-bottom:8px}
+.rp-hl{background:#f0faf4;border:1px solid #d3eedd;border-radius:10px;padding:9px 12px;font-size:14.5px;color:#1f6b40;margin-top:6px;line-height:1.55}
+.rp-hl::before{content:'✓ ';font-weight:800;color:#18a058}
+.rp-item{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-top:10px}
+.rp-area{font-size:15px;font-weight:800;color:#2b7fff}
+.rp-note{font-size:14.5px;color:#33475f;margin-top:5px;line-height:1.6}
+.rp-tip{font-size:14px;color:#8a6d1f;background:#fdf8ec;border-radius:8px;padding:7px 10px;margin-top:8px;line-height:1.55}
+.rp-proj{font-size:13px;color:#2b7fff;background:#eaf3ff;border-radius:8px;padding:6px 10px;margin-top:8px;line-height:1.5}
+.rp-say{font-size:13.5px;color:#5a7396;border-left:3px solid #cfe0f3;padding:2px 0 2px 10px;margin-top:8px;line-height:1.6}
+.rp-colors{display:flex;gap:10px;flex-wrap:wrap}
+.rp-color{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:#5a7396}
+.rp-color .sw{width:52px;height:52px;border-radius:12px;border:2px solid #fff;box-shadow:0 1px 4px rgba(31,59,99,.15)}
+.rp-sum{margin-top:14px;background:var(--bg);border-radius:10px;padding:10px 13px;font-size:13.5px;color:#5a7396;line-height:1.6}
+.coverImg{width:100%;border-radius:14px;border:1px solid var(--line);display:block;margin-top:12px}
+
 
 
 /* ════════ 动画 ════════
@@ -2476,13 +2500,13 @@ const Studio = {
   ],
 
   PROMPTS: {
-    report: '请为这张面部照片出一份「专业看脸报告」，按以下结构分点输出：\n1. 脸型与整体印象\n2. 三庭五眼比例观察（每庭一句话）\n3. 五官亮点（两三条）\n4. 可提升方向（两三条，咨询建议口吻，不做诊断）\n5. 推荐沟通的项目方向（皮肤管理/轮廓/抗衰等，各配一句给顾客的话）',
-    style:  '请为这张照片做「个人风格测评」，输出：\n1. 风格类型（从温柔知性/高级冷感/清新甜美/干练英气/复古文艺中选主风格，可混合）\n2. 判断依据（面部线条、五官比例、气质，两三句）\n3. 适合的妆容与色系（两条）\n4. 适合的医美项目方向（两条，咨询建议口吻）',
-    mark:   '请按面部美学框架对这张照片做「美学标注清单」，逐项输出（每项：部位名＋一句标注语＋一句建议）：\n三庭（上庭/中庭/下庭）、五眼比例、四高（额、鼻、唇、下巴）、三低（眼窝、鼻额交界、人中沟）、皮肤状态。最后用一段话做整体小结。',
-    beauty: '假设这是顾客本人照片，请输出一份「变美路线图」，分三个阶段：\n1 个月（皮肤管理）/ 3 个月（轮廓与五官协调）/ 6 个月（整体气质）。\n每阶段输出：目标、建议项目方向（咨询口吻，不承诺效果）、一句给顾客的话。结尾提醒：以上为美学咨询建议，具体以面诊为准。'
+    report: '分析这张面部照片，然后只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字、解释或代码块标记。JSON 结构（字段名和顺序严格一致）：\n{"kind":"report","score":0到100的整数,"verdict":"一句话总评（20字内）","radar":[{"name":"轮廓线条","score":0到100整数},{"name":"五官比例","score":整数},{"name":"皮肤状态","score":整数},{"name":"对称度","score":整数},{"name":"上镜度","score":整数}],"highlights":["五官亮点1","亮点2","亮点3"],"items":[{"area":"部位名","note":"现状描述一句话","tip":"提升建议一句话（咨询口吻）","project":"可沟通的项目方向","say":"给顾客的一句话"}],"summary":"整体小结50字内"}\nitems 给 3-4 条。不做医疗诊断，不承诺效果。',
+    style:  '分析这张照片，判断个人风格，然后只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"style","score":风格契合度0到100整数,"verdict":"主风格命名，如「温柔知性风」","tags":["气质关键词1","关键词2","关键词3"],"radar":[{"name":"气场","score":0到100},{"name":"甜度","score":整数},{"name":"成熟度","score":整数},{"name":"少年感","score":整数},{"name":"精致度","score":整数}],"colors":["适合该风格的服装主色，#RRGGBB格式","第二个颜色","第三个颜色","第四个颜色"],"highlights":["判断依据1（面部线条/五官/气质）","判断依据2"],"items":[{"area":"妆容/发型/穿搭/项目四选一","note":"现状或要点一句话","tip":"具体建议","project":"可沟通的项目方向","say":"给顾客的一句话"}],"summary":"50字内小结"}\nitems 给 3-4 条。',
+    mark:   '按面部美学框架（三庭五眼、四高三低）分析这张照片，只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"mark","score":0到100整数,"verdict":"整体标注结论一句话","radar":[{"name":"三庭比例","score":0到100},{"name":"五眼比例","score":整数},{"name":"四高协调","score":整数},{"name":"三低立体","score":整数},{"name":"皮肤状态","score":整数}],"highlights":["标注亮点1","亮点2"],"items":[{"area":"部位名（上庭/中庭/下庭/眼距/额头/鼻部/唇部/下巴/眼窝/人中沟/皮肤 中选）","note":"一句标注语","tip":"一句建议","project":"可沟通的项目方向，没有就留空","say":"给顾客的一句话"}],"summary":"50字内整体小结"}\nitems 给 5-8 条。',
+    beauty: '假设这是顾客本人照片，制定变美路线图，只输出一个 JSON 对象，禁止输出 JSON 以外的任何文字或代码块标记。JSON 结构（字段名严格一致）：\n{"kind":"beauty","score":改善潜力0到100整数,"verdict":"路线总纲一句话","radar":[{"name":"皮肤管理","score":优先级0到100},{"name":"轮廓协调","score":整数},{"name":"五官精雕","score":整数},{"name":"抗衰储备","score":整数},{"name":"居家配合","score":整数}],"highlights":["路线要点1","要点2"],"items":[{"area":"第1个月/第3个月/第6个月（共三条）","note":"阶段目标一句话","tip":"建议项目方向（咨询口吻，不承诺效果）","project":"居家护理配合","say":"给顾客的一句话"}],"summary":"提醒：以上为美学咨询建议，具体以面诊为准"}'
   },
 
-  VISION_SYS: '你是医美机构的面部美学顾问。分析基于大众审美与面部美学通用框架（三庭五眼、四高三低），语言专业但通俗。要求：1) 不做医疗诊断，不承诺效果；2) 建议落在皮肤管理、轮廓协调、抗衰等咨询方向；3) 分点输出；4) 中文。',
+  VISION_SYS: '你是医美机构的面部美学顾问。分析基于大众审美与面部美学通用框架（三庭五眼、四高三低），语言专业但通俗。要求：1) 严格按用户要求的 JSON 结构输出，除 JSON 外不输出任何文字；2) 不做医疗诊断，不承诺效果，建议落在皮肤管理、轮廓协调、抗衰等咨询方向；3) 评分客观中肯，亮点和建议都要具体到部位；4) 全部中文。',
 
   async render(){
     document.getElementById('studioTools').innerHTML = this.TOOLS.map(t =>
@@ -2583,14 +2607,25 @@ const Studio = {
     const out = document.getElementById('studioResult');
     const btn = document.getElementById('studioGo');
     this.busy = true;
-    btn.disabled = true;
-    out.innerHTML = '<div class="empty">AI 正在分析，大约十几秒…</div>';
+    if (btn) btn.disabled = true;
+    out.innerHTML = '<div class="empty">AI 正在分析并生成图文报告，大约十几秒…</div>';
     try {
       const j = await IMGApi.call({ action:'vision', image:this.photo,
                                     prompt:this.PROMPTS[this.tool], system:this.VISION_SYS });
-      this.lastText = { title: titles[this.tool], body: j.text };
-      out.innerHTML = `<div class="result">${Util.esc(j.text)}</div>
-        <div class="acts">
+      const data = this.parseJSON(j.text);
+      if (data && data.kind){
+        this.lastData = data;
+        this.lastData._photo = this.photo;   // 仅内存，供海报导出
+        this.lastText = { title: data.title || titles[this.tool], body: this.textify(data) };
+        out.innerHTML = this.renderRich(data, titles[this.tool]);
+      } else {
+        this.lastData = null;
+        this.lastText = { title: titles[this.tool], body: j.text };
+        out.innerHTML = `<div class="result">${Util.esc(j.text)}</div>`;
+      }
+      out.innerHTML += `<div class="acts">
+          ${data && data.kind ? '<button class="btn sm" onclick="Studio.exportPoster()">📸 生成报告海报</button>' : ''}
+          ${data && data.kind ? '<button class="btn ghost sm" onclick="Studio.genCover()">🖼️ AI 配图</button>' : ''}
           <button class="btn ghost sm" onclick="Studio.saveKB()">＋ 存入知识库</button>
           <button class="btn ghost sm" onclick="Studio.copyLast()">复制</button>
         </div>`;
@@ -2599,6 +2634,225 @@ const Studio = {
     }
     this.busy = false;
     if (btn) btn.disabled = false;
+  },
+
+  /* 从模型回复里抠出 JSON（容忍 ```json 包裹和前后废话） */
+  parseJSON(t){
+    if (!t) return null;
+    let s = t.replace(/```json|```/g, '').trim();
+    const a = s.indexOf('{'), b = s.lastIndexOf('}');
+    if (a < 0 || b <= a) return null;
+    try { return JSON.parse(s.slice(a, b + 1)); } catch { return null; }
+  },
+
+  /* 结构化数据 → 可读纯文本（存知识库 / 复制用） */
+  textify(d){
+    const L = [];
+    if (d.verdict) L.push('【总评】' + d.verdict + (d.score ? '（' + d.score + ' 分）' : ''));
+    if (d.tags && d.tags.length) L.push('【关键词】' + d.tags.join(' · '));
+    if (d.radar && d.radar.length) L.push('【维度评分】' + d.radar.map(r => r.name + ' ' + r.score).join(' / '));
+    if (d.highlights && d.highlights.length) d.highlights.forEach(h => L.push('✓ ' + h));
+    if (d.items && d.items.length) d.items.forEach(it => {
+      L.push('◆ ' + it.area + (it.note ? '：' + it.note : ''));
+      if (it.tip) L.push('  建议：' + it.tip);
+      if (it.project) L.push('  项目方向：' + it.project);
+      if (it.say) L.push('  话术：' + it.say);
+    });
+    if (d.colors && d.colors.length) L.push('【适合色系】' + d.colors.join('、'));
+    if (d.summary) L.push('【小结】' + d.summary);
+    return L.join('\n');
+  },
+
+  /* ── 图文报告渲染 ── */
+  radarSVG(radar){
+    const pts = radar.slice(0, 5);
+    while (pts.length < 5) pts.push({ name:'—', score: 0 });
+    const C = 130, R = 92, cx = C, cy = C + 6;
+    const angle = i => (Math.PI * 2 * i) / 5 - Math.PI / 2;
+    const at = (i, r) => [cx + Math.cos(angle(i)) * r, cy + Math.sin(angle(i)) * r];
+    const ring = f => '<polygon points="' + pts.map((_, i) => at(i, R * f).map(v => v.toFixed(1)).join(',')).join(' ') +
+                      '" fill="none" stroke="#d8e6f5" stroke-width="1"/>';
+    const val = '<polygon points="' + pts.map((p, i) => at(i, R * Math.max(0.06, Math.min(1, (p.score || 0) / 100))).map(v => v.toFixed(1)).join(',')).join(' ') +
+                '" fill="rgba(43,127,255,.18)" stroke="#2b7fff" stroke-width="2" stroke-linejoin="round"/>';
+    const dots = pts.map((p, i) => { const [x, y] = at(i, R * Math.max(0.06, Math.min(1, (p.score || 0) / 100)));
+      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#2b7fff"/>`; }).join('');
+    const labels = pts.map((p, i) => {
+      const [x, y] = at(i, R + 22);
+      const anchor = Math.abs(x - cx) < 12 ? 'middle' : (x > cx ? 'start' : 'end');
+      return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}" font-size="11.5" fill="#5a7396">${Util.esc(p.name)}</text>
+              <text x="${x.toFixed(1)}" y="${(y + 13).toFixed(1)}" text-anchor="${anchor}" font-size="12.5" font-weight="700" fill="#2b7fff">${p.score}</text>`;
+    }).join('');
+    const axes = pts.map((_, i) => { const [x, y] = at(i, R);
+      return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e3edf8" stroke-width="1"/>`; }).join('');
+    return `<svg viewBox="0 0 260 280" style="width:100%;max-width:320px;display:block;margin:0 auto">${ring(1)}${ring(.75)}${ring(.5)}${ring(.25)}${axes}${val}${dots}${labels}</svg>`;
+  },
+
+  donut(score){
+    const R = 40, C = 2 * Math.PI * R;
+    const s = Math.max(0, Math.min(100, Number(score) || 0));
+    const col = s >= 85 ? '#18a058' : s >= 70 ? '#2b7fff' : s >= 55 ? '#e8a23d' : '#d64545';
+    return `<svg viewBox="0 0 110 110" style="width:96px;height:96px;flex:none">
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="#e8f0fa" stroke-width="10"/>
+      <circle cx="55" cy="55" r="${R}" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round"
+        stroke-dasharray="${(C * s / 100).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 55 55)"/>
+      <text x="55" y="53" text-anchor="middle" font-size="26" font-weight="800" fill="${col}">${s}</text>
+      <text x="55" y="72" text-anchor="middle" font-size="11" fill="#8aa2bd">综合评分</text></svg>`;
+  },
+
+  renderRich(d, fallbackTitle){
+    const esc = s => Util.esc(s == null ? '' : String(s));
+    const title = esc(d.title || fallbackTitle || '美学分析报告');
+    const tags = (d.tags || []).map(t => `<span class="rp-tag">${esc(t)}</span>`).join('');
+    const colors = (d.colors || []).length ? `
+      <div class="rp-sec"><div class="rp-sect">🎨 适合色系</div>
+        <div class="rp-colors">${d.colors.map(c => `
+          <div class="rp-color"><div class="sw" style="background:${esc(c)}"></div><span>${esc(c)}</span></div>`).join('')}
+        </div></div>` : '';
+    const highlights = (d.highlights || []).length ? `
+      <div class="rp-sec"><div class="rp-sect">✨ 亮点</div>
+        ${d.highlights.map(h => `<div class="rp-hl">${esc(h)}</div>`).join('')}</div>` : '';
+    const items = (d.items || []).map(it => `
+      <div class="rp-item">
+        <div class="rp-area">${esc(it.area)}</div>
+        ${it.note ? `<div class="rp-note">${esc(it.note)}</div>` : ''}
+        ${it.tip ? `<div class="rp-tip">💡 ${esc(it.tip)}</div>` : ''}
+        ${it.project ? `<div class="rp-proj">医疗美容方向：${esc(it.project)}</div>` : ''}
+        ${it.say ? `<div class="rp-say">「${esc(it.say)}」</div>` : ''}
+      </div>`).join('');
+    const radar = (d.radar && d.radar.length) ? `
+      <div class="rp-sec"><div class="rp-sect">📊 维度解析</div>${this.radarSVG(d.radar)}</div>` : '';
+    return `<div class="rp">
+      <div class="rp-hero">
+        ${this.donut(d.score)}
+        <div class="rp-heroR">
+          <div class="rp-title">${title}</div>
+          <div class="rp-verdict">${esc(d.verdict)}</div>
+          ${tags ? `<div class="rp-tags">${tags}</div>` : ''}
+        </div>
+      </div>
+      <div id="studioCover"></div>
+      ${radar}${highlights}${colors}
+      ${items ? `<div class="rp-sec"><div class="rp-sect">📋 详细建议</div>${items}</div>` : ''}
+      ${d.summary ? `<div class="rp-sum">${esc(d.summary)}</div>` : ''}
+      <p class="hint">以上为 AI 美学咨询建议，非医疗诊断；对外发送前请征得顾客同意。</p>
+    </div>`;
+  },
+
+  /* ── 报告配图：文生图插在报告顶部 ── */
+  async genCover(){
+    const box = document.getElementById('studioCover');
+    if (!box || this.busy) return;
+    const d = this.lastData || {};
+    const kindPrompt = {
+      report:  '医美美学分析主题插画，柔和蓝白色调，抽象面部轮廓线条与光点，高级感，留白多，扁平插画风格',
+      style:   '时尚风格灵感插画：' + (d.verdict || '优雅知性') + '氛围，柔和色调，服装与妆容元素，杂志感，扁平插画风格',
+      mark:    '面部美学标注主题插画，几何线条与测量刻度元素，蓝白色调，专业精致，扁平插画风格',
+      beauty:  '变美成长主题插画，阶梯或时间轴元素，向上生长的花朵与光，柔和蓝粉色调，扁平插画风格'
+    };
+    this.busy = true;
+    box.innerHTML = '<div class="empty">正在生成配图，约 20 秒…</div>';
+    try {
+      const j = await IMGApi.call({ action:'gen', prompt:kindPrompt[this.lastData.kind] || kindPrompt.report });
+      box.innerHTML = `<img class="coverImg" src="${j.url}" alt="报告配图">`;
+    } catch(e){ box.innerHTML = `<div class="empty">${Util.esc(e.message)}</div>`; }
+    this.busy = false;
+  },
+
+  /* ── 报告海报：canvas 合成，可保存发顾客 ── */
+  exportPoster(){
+    const d = this.lastData;
+    if (!d) return;
+    const W = 900, H = 1400;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const g = cv.getContext('2d');
+    const escT = s => String(s == null ? '' : s);
+
+    g.fillStyle = '#f4f9ff'; g.fillRect(0, 0, W, H);
+    // 头部
+    const grad = g.createLinearGradient(0, 0, W, 240);
+    grad.addColorStop(0, '#2b7fff'); grad.addColorStop(1, '#5ea4ff');
+    g.fillStyle = grad; g.fillRect(0, 0, W, 240);
+    g.fillStyle = '#fff';
+    g.font = 'bold 46px "Microsoft YaHei", sans-serif';
+    g.fillText(escT(d.title || '美学分析报告'), 48, 92);
+    g.font = '24px "Microsoft YaHei", sans-serif'; g.globalAlpha = .9;
+    g.fillText('小郅的工作台 · AI 美学工坊', 48, 136);
+    g.fillText(new Date().toLocaleDateString('zh-CN'), 48, 172);
+    g.globalAlpha = 1;
+
+    // 照片（圆形，本地内存，不上传）
+    let px = W - 48, py = 96;
+    const drawPhoto = (done) => {
+      if (!this.photo) return done();
+      const img = new Image();
+      img.onload = () => {
+        const r = 74, cx2 = px - r, cy2 = py + r;
+        g.save();
+        g.beginPath(); g.arc(cx2, cy2, r, 0, Math.PI * 2); g.clip();
+        const s = Math.max(r * 2 / img.width, r * 2 / img.height);
+        g.drawImage(img, cx2 - img.width * s / 2, cy2 - img.height * s / 2, img.width * s, img.height * s);
+        g.restore();
+        g.beginPath(); g.arc(cx2, cy2, r, 0, Math.PI * 2);
+        g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 5; g.stroke();
+        done();
+      };
+      img.onerror = () => done();
+      img.src = this.photo;
+    };
+
+    const drawBody = () => {
+      let y = 300;
+      // 评分 + 总评
+      g.fillStyle = '#fff';
+      g.beginPath(); g.roundRect ? g.roundRect(48, y, W - 96, 170, 22) : g.rect(48, y, W - 96, 170); g.fill();
+      const s = Math.max(0, Math.min(100, Number(d.score) || 0));
+      g.fillStyle = s >= 70 ? '#2b7fff' : '#e8a23d';
+      g.font = 'bold 84px "Microsoft YaHei", sans-serif';
+      g.fillText(String(s), 84, y + 108);
+      g.font = '22px "Microsoft YaHei", sans-serif'; g.fillStyle = '#8aa2bd';
+      g.fillText('综合评分', 88, y + 142);
+      g.fillStyle = '#1f3b63'; g.font = 'bold 30px "Microsoft YaHei", sans-serif';
+      g.fillText(escT(d.verdict).slice(0, 18), 240, y + 78);
+      g.font = '24px "Microsoft YaHei", sans-serif'; g.fillStyle = '#5a7396';
+      g.fillText(escT(d.summary).slice(0, 24), 240, y + 122);
+      y += 210;
+
+      // 亮点
+      (d.highlights || []).slice(0, 3).forEach(h => {
+        g.fillStyle = '#fff';
+        g.beginPath(); g.roundRect ? g.roundRect(48, y, W - 96, 74, 16) : g.rect(48, y, W - 96, 74); g.fill();
+        g.fillStyle = '#18a058'; g.font = 'bold 26px "Microsoft YaHei", sans-serif';
+        g.fillText('✓', 76, y + 46);
+        g.fillStyle = '#1f3b63'; g.font = '26px "Microsoft YaHei", sans-serif';
+        g.fillText(escT(h).slice(0, 28), 110, y + 46);
+        y += 90;
+      });
+
+      // 详细建议前 3 条
+      (d.items || []).slice(0, 3).forEach(it => {
+        g.fillStyle = '#fff';
+        g.beginPath(); g.roundRect ? g.roundRect(48, y, W - 96, 168, 18) : g.rect(48, y, W - 96, 168); g.fill();
+        g.fillStyle = '#2b7fff'; g.font = 'bold 27px "Microsoft YaHei", sans-serif';
+        g.fillText(escT(it.area).slice(0, 12), 76, y + 46);
+        g.fillStyle = '#33475f'; g.font = '24px "Microsoft YaHei", sans-serif';
+        g.fillText(escT(it.note).slice(0, 30), 76, y + 88);
+        if (it.tip){ g.fillStyle = '#8a6d1f'; g.fillText('💡 ' + escT(it.tip).slice(0, 28), 76, y + 128); }
+        y += 190;
+      });
+
+      // 底部
+      g.fillStyle = '#8aa2bd'; g.font = '20px "Microsoft YaHei", sans-serif';
+      g.fillText('以上为 AI 美学咨询建议，非医疗诊断，具体以面诊为准', 48, H - 96);
+      g.fillText('由「小郅的工作台」生成', 48, H - 60);
+
+      const url = cv.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href = url; a.download = '美学报告.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      UI.toast('海报已生成，手机端也可长按图片保存');
+    };
+    drawPhoto(drawBody);
   },
 
   saveKB(){
