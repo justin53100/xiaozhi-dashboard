@@ -206,6 +206,17 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
 #ov{position:fixed;inset:0;z-index:70;display:none;align-items:flex-end;justify-content:center;background:rgba(20,30,50,.42)}
 #ov .panel{background:var(--card);width:100%;max-width:640px;max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom,0))}
 
+/* ==== 美学工坊 ==== */
+.photoPrev{max-width:180px;border-radius:12px;border:1px solid var(--line);display:block;margin-top:10px}
+.imgout{margin-top:14px}
+.imgout img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
+.imgout .hint{margin-top:6px}
+.frame{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:10px}
+.frame .no{font-size:12px;color:var(--accent);font-weight:600}
+.frame .line{font-size:15px;font-weight:500;margin:4px 0}
+.result{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px;white-space:pre-wrap;font-size:15px;line-height:1.8;word-break:break-word}
+
+
 
 /* ════════ 动画 ════════
    只做「让状态变化可理解」的动画，不做炫技的。
@@ -571,6 +582,23 @@ input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
       <div class="card wide" id="fileList"></div>
     </section>
     <!-- ==== 功能：课件库 END ==== -->
+
+    <!-- ==== 功能：美学工坊 START ==== -->
+    <section class="page" id="page-studio">
+      <div class="page-title">AI 美学工坊</div>
+      <div class="page-sub">看脸报告 · 风格测评 · 变美路线 · 海报 · 分镜</div>
+
+      <div class="card wide">
+        <div class="wrap" id="studioTools"></div>
+        <p class="hint" style="margin:10px 0 0">
+          🔒 顾客照片只在分析那一刻发给 AI，工作台<b>不保存照片</b>；上传前请征得顾客同意。<br>
+          分析结论仅供参考，不做医疗诊断；效果类图片对外展示时注明「AI 示意图，非实际效果」。
+        </p>
+      </div>
+
+      <div class="card wide" id="studioPanel"></div>
+    </section>
+    <!-- ==== 功能：美学工坊 END ==== -->
 
     <!-- 设置页是必备的，不要删 -->
     <!-- ==== 功能：设置 START ==== -->
@@ -1311,6 +1339,7 @@ const App = {
     { id:'scripts',  icon:'📚', name:'话术库',   onShow: () => Scripts.render() },
     { id:'ai',       icon:'🤖', name:'AI 助手',  onShow: () => AIChat.render() },
     { id:'files',    icon:'📂', name:'课件库',   onShow: () => Files.render()  },
+    { id:'studio',   icon:'🎨', name:'美学工坊', onShow: () => Studio.render() },
     { id:'recap',    icon:'📊', name:'周复盘',   onShow: () => Recap.render()  },
     { id:'settings', icon:'⚙️', name:'设置',     onShow: () => Settings.render() }
   ],
@@ -2385,6 +2414,335 @@ const Overlay = {
     this.close();
     Scripts.render();
     UI.toast('已保存，双端会同步');
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   IMGApi · 美学工坊云端调用（视觉分析 + 文生图）
+   走 /api/img 代理，Key 只在云端；照片不落盘，只在请求里转发。
+   ═══════════════════════════════════════════════════════════ */
+const IMGApi = {
+  async call(payload){
+    const c = AIApi.creds();
+    if (!c) throw new Error('需要先开启同步（美学工坊走你的账号鉴权）');
+    const r = await fetch('/api/img', {
+      method:'POST', headers:{ 'content-type':'application/json' },
+      body: JSON.stringify(Object.assign({ user:c.user, pass:c.pass }, payload))
+    });
+    const j = await r.json().catch(() => ({ error:'返回格式不对' }));
+    if (!r.ok){
+      if (j.error === 'VISION_NOT_CONFIGURED' || j.error === 'IMAGE_NOT_CONFIGURED')
+        throw new Error(j.hint || '云端还没配置对应模型');
+      throw new Error(j.error || ('请求失败 ' + r.status));
+    }
+    return j;
+  },
+
+  async status(){
+    try {
+      const r = await fetch('/api/img', {
+        method:'POST', headers:{ 'content-type':'application/json' },
+        body: JSON.stringify({ action:'status' })
+      });
+      return await r.json();
+    } catch { return { vision:false, image:false }; }
+  }
+};
+
+
+/* ═══════════════════════════════════════════════════════════
+   Studio · AI 美学工坊
+   六个工具：看脸报告 / 风格测评 / 美学标注 / 变美路线（视觉分析）
+   海报设计 / 短句分镜（分镜走文字模型，配图走生图模型）
+   照片只在内存里，不进 Store、不进同步。
+   ═══════════════════════════════════════════════════════════ */
+const Studio = {
+  tool: 'report',
+  photo: null,        // dataURL，仅内存
+  busy: false,
+  caps: null,
+  lastText: null,     // 最近一次分析结果 {title, body}
+  frames: [],         // 分镜脚本
+  posterStyle: '清新简约',
+
+  TOOLS: [
+    { tid:'report', icon:'🔍', name:'看脸报告',   need:'vision' },
+    { tid:'style',  icon:'👗', name:'风格测评',   need:'vision' },
+    { tid:'mark',   icon:'📐', name:'美学标注',   need:'vision' },
+    { tid:'beauty', icon:'✨', name:'变美路线',   need:'vision' },
+    { tid:'poster', icon:'🖼️', name:'海报设计',   need:'image'  },
+    { tid:'board',  icon:'🎬', name:'短句分镜',   need:'text'   }
+  ],
+
+  PROMPTS: {
+    report: '请为这张面部照片出一份「专业看脸报告」，按以下结构分点输出：\n1. 脸型与整体印象\n2. 三庭五眼比例观察（每庭一句话）\n3. 五官亮点（两三条）\n4. 可提升方向（两三条，咨询建议口吻，不做诊断）\n5. 推荐沟通的项目方向（皮肤管理/轮廓/抗衰等，各配一句给顾客的话）',
+    style:  '请为这张照片做「个人风格测评」，输出：\n1. 风格类型（从温柔知性/高级冷感/清新甜美/干练英气/复古文艺中选主风格，可混合）\n2. 判断依据（面部线条、五官比例、气质，两三句）\n3. 适合的妆容与色系（两条）\n4. 适合的医美项目方向（两条，咨询建议口吻）',
+    mark:   '请按面部美学框架对这张照片做「美学标注清单」，逐项输出（每项：部位名＋一句标注语＋一句建议）：\n三庭（上庭/中庭/下庭）、五眼比例、四高（额、鼻、唇、下巴）、三低（眼窝、鼻额交界、人中沟）、皮肤状态。最后用一段话做整体小结。',
+    beauty: '假设这是顾客本人照片，请输出一份「变美路线图」，分三个阶段：\n1 个月（皮肤管理）/ 3 个月（轮廓与五官协调）/ 6 个月（整体气质）。\n每阶段输出：目标、建议项目方向（咨询口吻，不承诺效果）、一句给顾客的话。结尾提醒：以上为美学咨询建议，具体以面诊为准。'
+  },
+
+  VISION_SYS: '你是医美机构的面部美学顾问。分析基于大众审美与面部美学通用框架（三庭五眼、四高三低），语言专业但通俗。要求：1) 不做医疗诊断，不承诺效果；2) 建议落在皮肤管理、轮廓协调、抗衰等咨询方向；3) 分点输出；4) 中文。',
+
+  async render(){
+    document.getElementById('studioTools').innerHTML = this.TOOLS.map(t =>
+      `<button class="chip ${t.tid === this.tool ? 'on' : ''}" onclick="Studio.pick('${t.tid}')">${t.icon} ${t.name}</button>`).join('');
+
+    if (!this.caps) this.caps = await IMGApi.status();
+    const t = this.TOOLS.find(x => x.tid === this.tool);
+    if (t.need !== 'text' && !this.caps[t.need]){
+      document.getElementById('studioPanel').innerHTML = `<div class="empty">
+        这个工具需要云端配置${t.need === 'vision' ? '视觉（看照片）' : '生图'}模型。<br><br>
+        做法：手机号注册 <b>open.bigmodel.cn</b>（智谱）→ 左下角 API Keys → 创建并复制<br>
+        → Makers 控制台 项目 → 设置 → 环境变量 → 新增 <b class="mono">ZHIPU_API_KEY</b> 粘贴 → 重新部署。<br><br>
+        看照片（glm-4v-flash）和生图（cogview-3-flash）都是免费模型。</div>`;
+      return;
+    }
+    this.panel();
+  },
+
+  pick(id){ this.tool = id; this.render(); },
+
+  /* ── 各工具的面板 ── */
+  panel(){
+    const p = document.getElementById('studioPanel');
+    const visionBlock = (btnText) => `
+      <p class="hint" style="margin:0 0 10px">上传一张正面清晰的素颜或淡妆照片，光线越自然分析越准。</p>
+      <div class="row">
+        <button class="btn" onclick="Studio.pickPhoto()">📷 选照片</button>
+        <button class="btn" id="studioGo" onclick="Studio.analyze()" ${this.photo ? '' : 'disabled style="opacity:.45"'}>${btnText}</button>
+        ${this.photo ? '<button class="btn ghost" onclick="Studio.photo=null;Studio.panel()">换一张</button>' : ''}
+      </div>
+      ${this.photo ? `<img class="photoPrev" src="${this.photo}" alt="待分析照片">` : ''}
+      <div id="studioResult"></div>`;
+
+    if (this.tool === 'report') p.innerHTML = `<h2>🔍 专业看脸报告</h2>${visionBlock('生成报告')}`;
+    else if (this.tool === 'style') p.innerHTML = `<h2>👗 风格测评</h2>${visionBlock('开始测评')}`;
+    else if (this.tool === 'mark') p.innerHTML = `<h2>📐 面部美学标注</h2>${visionBlock('生成标注清单')}`;
+    else if (this.tool === 'beauty') p.innerHTML = `<h2>✨ 变美路线</h2>${visionBlock('生成路线图')}`;
+
+    else if (this.tool === 'poster') p.innerHTML = `
+      <h2>🖼️ 海报设计</h2>
+      <p class="hint" style="margin:0 0 10px">写清主题和元素，例如：双 11 促销，主推水光套餐，粉色系。</p>
+      <textarea id="posterPrompt" placeholder="例如：秋天新品补水节，主推水光针套餐，要有大片留白放标题"></textarea>
+      <div class="wrap" style="margin-top:10px">${['清新简约','高级感','促销热烈','节日主题'].map(s =>
+        `<button class="chip ${s === this.posterStyle ? 'on' : ''}" onclick="Studio.posterStyle='${s}';Studio.panel()">${s}</button>`).join('')}</div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" onclick="Studio.genPoster()">🎨 生成海报图</button>
+      </div>
+      <p class="hint">生成的是画面底图，标题文字建议用美图/醒图加上去，AI 直接写的中文容易变形。</p>
+      <div id="studioResult"></div>`;
+
+    else if (this.tool === 'board') p.innerHTML = `
+      <h2>🎬 AI 短句分镜</h2>
+      <input type="text" id="boardTheme" placeholder="视频/图文主题，例如：秋补水、老客答谢、热玛吉科普">
+      <div class="row" style="margin-top:10px">
+        <button class="btn" onclick="Studio.genBoard()">🎬 生成分镜脚本</button>
+      </div>
+      <div id="studioResult"></div>`;
+  },
+
+  /* ── 照片：选 → 压到 768px JPEG（只存内存） ── */
+  pickPhoto(){
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = () => {
+      const f = inp.files && inp.files[0];
+      if (!f) return;
+      UI.toast('正在压缩照片…');
+      this.compress(f).then(() => { this.panel(); UI.toast('照片就绪，点按钮开始分析'); })
+                      .catch(() => UI.toast('照片读取失败，换一张试试'));
+    };
+    inp.click();
+  },
+
+  compress(file){
+    return new Promise((res, rej) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 768;
+        const r = Math.min(1, MAX / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(1, Math.round(img.width * r));
+        cv.height = Math.max(1, Math.round(img.height * r));
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        this.photo = cv.toDataURL('image/jpeg', 0.75);
+        res();
+      };
+      img.onerror = rej;
+      img.src = url;
+    });
+  },
+
+  /* ── 视觉分析四个工具共用 ── */
+  async analyze(){
+    if (this.busy || !this.photo) return;
+    const titles = { report:'专业看脸报告', style:'风格测评', mark:'美学标注', beauty:'变美路线' };
+    const out = document.getElementById('studioResult');
+    const btn = document.getElementById('studioGo');
+    this.busy = true;
+    btn.disabled = true;
+    out.innerHTML = '<div class="empty">AI 正在分析，大约十几秒…</div>';
+    try {
+      const j = await IMGApi.call({ action:'vision', image:this.photo,
+                                    prompt:this.PROMPTS[this.tool], system:this.VISION_SYS });
+      this.lastText = { title: titles[this.tool], body: j.text };
+      out.innerHTML = `<div class="result">${Util.esc(j.text)}</div>
+        <div class="acts">
+          <button class="btn ghost sm" onclick="Studio.saveKB()">＋ 存入知识库</button>
+          <button class="btn ghost sm" onclick="Studio.copyLast()">复制</button>
+        </div>`;
+    } catch(e){
+      out.innerHTML = `<div class="empty">${Util.esc(e.message)}</div>`;
+    }
+    this.busy = false;
+    if (btn) btn.disabled = false;
+  },
+
+  saveKB(){
+    if (!this.lastText) return;
+    Store.upsert('kb', { id: Util.uid(), title: this.lastText.title, body: this.lastText.body });
+    UI.toast('已存入知识库，在「每日知识」页查看');
+  },
+
+  copyLast(){
+    if (!this.lastText) return;
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(this.lastText.body).then(() => UI.toast('已复制')).catch(() => {});
+    else UI.toast('长按文字手动复制');
+  },
+
+  /* ── 海报：文生图 ── */
+  async genPoster(){
+    if (this.busy) return;
+    const desc = (document.getElementById('posterPrompt').value || '').trim();
+    if (!desc) return UI.toast('先写一句画面描述');
+    const out = document.getElementById('studioResult');
+    this.busy = true;
+    out.innerHTML = '<div class="empty">正在画海报，大约十几秒…</div>';
+    try {
+      const j = await IMGApi.call({ action:'gen',
+        prompt:`医美机构宣传海报底图，主题：${desc}。整体风格：${this.posterStyle}，画面干净、留白充足、有高级感，柔和光线，不出现文字，不放人脸特写。` });
+      out.innerHTML = `<div class="imgout">
+        <img src="${Util.esc(j.url)}" alt="海报底图">
+        <p class="hint">长按图片可保存（电脑右键另存）。记得自己加标题文字；对外展示注明「AI 示意图」。</p>
+      </div>`;
+    } catch(e){
+      out.innerHTML = `<div class="empty">${Util.esc(e.message)}</div>`;
+    }
+    this.busy = false;
+  },
+
+  /* ── 分镜：文字模型写脚本，逐镜可配图 ── */
+  async genBoard(){
+    if (this.busy) return;
+    const theme = (document.getElementById('boardTheme').value || '').trim();
+    if (!theme) return UI.toast('先填主题');
+    const out = document.getElementById('studioResult');
+    this.busy = true;
+    out.innerHTML = '<div class="empty">AI 正在写分镜…</div>';
+    try {
+      const t = await AIApi.call([
+        { role:'user', content:
+          `主题：${theme}\n请生成一条朋友圈短视频/图文的分镜脚本，共 6 个镜头。每个镜头严格按这个格式输出：\n` +
+          `【镜头N】\n画面：一句话画面描述\n短句：放在画面上的文案，15 字以内\n拍摄：一句话拍摄建议\n` +
+          `最后加一行「BGM 氛围：……」。只输出脚本，不要解释。` }
+      ], AIChat.SYS, 0.8);
+      this.parseFrames(t);
+      if (!this.frames.length){
+        // 模型没按格式输出：原样展示，别让用户面对空屏
+        this.lastText = { title:'分镜脚本', body:t };
+        document.getElementById('studioResult').innerHTML =
+          `<div class="result">${Util.esc(t)}</div>
+           <div class="acts">
+             <button class="btn ghost sm" onclick="Studio.copyLast()">复制</button>
+             <button class="btn ghost sm" onclick="Studio.saveKB()">＋ 存入知识库</button>
+           </div>`;
+      } else {
+        this.renderFrames();
+      }
+    } catch(e){
+      out.innerHTML = `<div class="empty">${Util.esc(e.message)}</div>`;
+    }
+    this.busy = false;
+  },
+
+  parseFrames(text){
+    this.frames = [];
+    const parts = String(text).split(/【镜头(\d)】/);
+    for (let i = 1; i < parts.length; i += 2){
+      const seg = parts[i + 1] || '';
+      const get = k => {
+        const m = seg.match(new RegExp(k + '[:：]\\s*([^\\n]+)'));
+        return m ? m[1].trim() : '';
+      };
+      this.frames.push({ n: Number(parts[i]), scene: get('画面'), line: get('短句'), tip: get('拍摄') });
+    }
+  },
+
+  renderFrames(){
+    const out = document.getElementById('studioResult');
+    if (!this.frames.length){
+      out.innerHTML = '<div class="empty">没有解析出分镜，重新生成试试。</div>';
+      return;
+    }
+    out.innerHTML = this.frames.map((f, i) => `
+      <div class="frame">
+        <div class="no">镜头 ${f.n}</div>
+        ${f.scene ? `<div style="font-size:15px;line-height:1.7">📷 ${Util.esc(f.scene)}</div>` : ''}
+        ${f.line ? `<div class="line">💬 ${Util.esc(f.line)}</div>` : ''}
+        ${f.tip ? `<div class="sub">🎥 ${Util.esc(f.tip)}</div>` : ''}
+        <div class="acts">
+          <button class="btn ghost sm" onclick="Studio.frameImg(${i})">🖼️ 生成配图</button>
+        </div>
+        <div id="frameImg${i}"></div>
+      </div>`).join('') +
+      `<div class="acts" style="margin-top:12px">
+        <button class="btn ghost sm" onclick="Studio.copyFrames()">复制整个脚本</button>
+        <button class="btn ghost sm" onclick="Studio.saveFramesKB()">＋ 存入知识库</button>
+      </div>`;
+  },
+
+  async frameImg(i){
+    const f = this.frames[i];
+    if (!f || this.busy) return;
+    const slot = document.getElementById('frameImg' + i);
+    if (!this.caps) this.caps = await IMGApi.status();
+    if (!this.caps.image){
+      slot.innerHTML = '<p class="hint">生图还没配置：去美学工坊设置指引里添加 ZHIPU_API_KEY。</p>';
+      return;
+    }
+    this.busy = true;
+    slot.innerHTML = '<p class="hint">正在画这一镜…</p>';
+    try {
+      const j = await IMGApi.call({ action:'gen',
+        prompt:`短视频画面帧：${f.scene || f.line}。医美机构氛围，柔和光线，高级感构图，画面干净，不出现文字。` });
+      slot.innerHTML = `<div class="imgout"><img src="${Util.esc(j.url)}" alt="分镜配图">
+        <p class="hint">长按保存，短句文字后期加上去。</p></div>`;
+    } catch(e){
+      slot.innerHTML = `<p class="hint">${Util.esc(e.message)}</p>`;
+    }
+    this.busy = false;
+  },
+
+  framesText(){
+    return this.frames.map(f =>
+      `【镜头${f.n}】\n画面：${f.scene}\n短句：${f.line}\n拍摄：${f.tip}`).join('\n\n');
+  },
+
+  copyFrames(){
+    if (!this.frames.length) return;
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(this.framesText()).then(() => UI.toast('已复制')).catch(() => {});
+    else UI.toast('长按文字手动复制');
+  },
+
+  saveFramesKB(){
+    if (!this.frames.length) return;
+    Store.upsert('kb', { id: Util.uid(), title:'分镜脚本 · ' + (this.frames[0].line || '').slice(0,14), body: this.framesText() });
+    UI.toast('已存入知识库');
   }
 };
 
